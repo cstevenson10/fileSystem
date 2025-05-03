@@ -1,0 +1,4 @@
+/home/connor/comp362/cifs/task_1/build/CMakeFiles/cifs.dir
+/home/connor/comp362/cifs/task_1/build/CMakeFiles/blockVolume.dir
+/home/connor/comp362/cifs/task_1/build/CMakeFiles/edit_cache.dir
+/home/connor/comp362/cifs/task_1/build/CMakeFiles/rebuild_cache.dir
