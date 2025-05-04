@@ -360,7 +360,7 @@ CIFS_ERROR cifsCreateFile(CIFS_NAME_TYPE filePath, CIFS_CONTENT_TYPE type)
 
 	newFD.content.fileDescriptor.identifier = cifsContext->superblock->cifsNextUniqueIdentifier++;
 	newFD.content.fileDescriptor.type = type;
-	strcpy(newFD.content.fileDescriptor.name, "file1");
+	strcpy(newFD.content.fileDescriptor.name, filePath);
 	newFD.content.fileDescriptor.accessRights = umask(fuseContext->umask);
 	newFD.content.fileDescriptor.owner = fuseContext->uid;
 	newFD.content.fileDescriptor.size = 0;
@@ -377,7 +377,6 @@ CIFS_ERROR cifsCreateFile(CIFS_NAME_TYPE filePath, CIFS_CONTENT_TYPE type)
 	CIFS_BLOCK_TYPE newInd;
 	newInd.type = CIFS_INDEX_CONTENT_TYPE;
 	// no files in the root folder yet, so all entries are free
-	//memset(&(rootFolderIndexBlock.content), CIFS_INVALID_INDEX, CIFS_INDEX_SIZE);
 	for(int i = 0; i < CIFS_INDEX_SIZE; i++) {
 		newInd.content.index[i] = CIFS_INVALID_INDEX;
 	}
@@ -391,23 +390,27 @@ CIFS_ERROR cifsCreateFile(CIFS_NAME_TYPE filePath, CIFS_CONTENT_TYPE type)
 	unsigned char block[CIFS_BLOCK_SIZE];
 	for (int i = 0; i < CIFS_SUPERBLOCK_INDEX; i++)
 	{
-		for (int j = 0; j < CIFS_BLOCK_SIZE; j++)
+		for (int j = 0; j < CIFS_BLOCK_SIZE; j++) {
 			block[j] = cifsContext->bitvector[i * CIFS_BLOCK_SIZE + j];
+		}
 
         cifsWriteBlock((const unsigned char *) block, i);
 	}
 
 	// Write root FD
-	cifsWriteBlock((const unsigned char *) rootFD, cifsContext->superblock->cifsRootNodeIndex);
+	cifsWriteBlock((const unsigned char *) rootFD, rootFdIndex);
 
 	// Write root Ind
-	cifsWriteBlock((const unsigned char *) rootInd, cifsContext->superblock->cifsRootNodeIndex);
+	cifsWriteBlock((const unsigned char *) rootInd, rootFD->content.fileDescriptor.block_ref);
 	
 	// Write new FD
-	cifsWriteBlock((const unsigned char *) &newFD, cifsContext->superblock->cifsRootNodeIndex);
+	cifsWriteBlock((const unsigned char *) &newFD, fdIndex);
 
 	// Write new Ind
-	cifsWriteBlock((const unsigned char *) &newInd, cifsContext->superblock->cifsRootNodeIndex);
+	cifsWriteBlock((const unsigned char *) &newInd, indexBlockIndex);
+
+	free(rootFD);
+	free(rootInd);
 
 	return CIFS_NO_ERROR;
 }

@@ -160,16 +160,20 @@ void testStep1()
 {
 	printf("\n\nTESTS FOR STEP #1\n=================\n\n");
 
-	cifsCreateFile("file1", CIFS_FOLDER_CONTENT_TYPE);
-
-	printf("\n\nROOT INDEX: #1\n=================\n\n");
-	cifsReadBlock(CIFS_SUPERBLOCK_INDEX + 2);
-	printf("\n\nEND ROOT INDEX\n=================\n\n");
-	cifsCreateFile("file2", CIFS_FOLDER_CONTENT_TYPE);
-	printf("\n\nEND ROOT INDEX\n=================\n\n");
-	cifsReadBlock(CIFS_SUPERBLOCK_INDEX + 2);
+	free(cifsReadBlock(CIFS_SUPERBLOCK_INDEX + 2));
 
 
+	char file1[128] = "file1";
+	cifsCreateFile(file1, CIFS_FOLDER_CONTENT_TYPE);
+	free(cifsReadBlock(CIFS_SUPERBLOCK_INDEX + 2));
+
+	char file2[128] = "file2";
+	cifsCreateFile(file2, CIFS_FOLDER_CONTENT_TYPE);
+	free(cifsReadBlock(CIFS_SUPERBLOCK_INDEX + 2));
+
+	char file3[128] = "file3";
+	cifsCreateFile(file3, CIFS_FOLDER_CONTENT_TYPE);
+	free(cifsReadBlock(CIFS_SUPERBLOCK_INDEX + 2));
 }
 
 
