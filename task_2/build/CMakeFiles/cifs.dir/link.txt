@@ -1,0 +1,1 @@
+/usr/bin/cc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG CMakeFiles/cifs.dir/src/test_cifs.c.o CMakeFiles/cifs.dir/src/cifs.c.o -o bin/cifs  /usr/lib/x86_64-linux-gnu/libfuse.so 

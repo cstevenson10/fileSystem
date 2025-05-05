@@ -1,0 +1,1 @@
+/usr/bin/cc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG CMakeFiles/blockVolume.dir/src/blockVolume.c.o -o bin/blockVolume 

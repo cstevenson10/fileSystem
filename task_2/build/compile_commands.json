@@ -1,0 +1,20 @@
+[
+{
+  "directory": "/home/connor/comp362/cifs/task_1/build",
+  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/cifs/task_1/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/cifs.dir/src/test_cifs.c.o -c /home/connor/comp362/cifs/task_1/src/test_cifs.c",
+  "file": "/home/connor/comp362/cifs/task_1/src/test_cifs.c",
+  "output": "CMakeFiles/cifs.dir/src/test_cifs.c.o"
+},
+{
+  "directory": "/home/connor/comp362/cifs/task_1/build",
+  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/cifs/task_1/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/cifs.dir/src/cifs.c.o -c /home/connor/comp362/cifs/task_1/src/cifs.c",
+  "file": "/home/connor/comp362/cifs/task_1/src/cifs.c",
+  "output": "CMakeFiles/cifs.dir/src/cifs.c.o"
+},
+{
+  "directory": "/home/connor/comp362/cifs/task_1/build",
+  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/cifs/task_1/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/blockVolume.dir/src/blockVolume.c.o -c /home/connor/comp362/cifs/task_1/src/blockVolume.c",
+  "file": "/home/connor/comp362/cifs/task_1/src/blockVolume.c",
+  "output": "CMakeFiles/blockVolume.dir/src/blockVolume.c.o"
+}
+]
