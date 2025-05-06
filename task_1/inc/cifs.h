@@ -163,7 +163,7 @@ typedef char CIFS_DATA_TYPE[CIFS_DATA_SIZE];
 */
 typedef struct cifs_block_type
 {
-	CIFS_CONTENT_TYPE type; // TODO: Whats the difference between this and fd type
+	CIFS_CONTENT_TYPE type;
 	union
 	{ // content depends on the type
 		CIFS_FILE_DESCRIPTOR_TYPE fileDescriptor __attribute__((packed)); // for directories and files
@@ -348,14 +348,11 @@ void cifsClearBit(unsigned char* bitvector, unsigned short bitIndex);
 
 
 // Extra Helper Functions
-//void traverseDisk(CIFS_INDEX_TYPE* index, int size, char* path);
-void traverseFolder(CIFS_INDEX_TYPE discIndex, CIFS_FILE_HANDLE_TYPE parentFileHandle);
-//void addToHashTable(long index, char* filePath, CIFS_FILE_DESCRIPTOR_TYPE* fd);
-//void addToHashTable(long index, CIFS_FILE_DESCRIPTOR_TYPE* fd);
-void addToHashTable(CIFS_FILE_DESCRIPTOR_TYPE* fd, CIFS_FILE_HANDLE_TYPE parentFileHandle); 
+void traverseDisk(CIFS_INDEX_TYPE* index, int size, char* path);
+void addToHashTable(long index, char* filePath, CIFS_FILE_DESCRIPTOR_TYPE* fd);
 int doesFileExist(char* filePath);
 void writeBvSb(void);
-void addIndex(CIFS_INDEX_TYPE* index, int size, CIFS_FILE_HANDLE_TYPE parentFileHandle);
+
 
 /***
  * The following functions can be used to simulate FUSE context's user and process identifiers for testing.
