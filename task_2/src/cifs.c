@@ -259,15 +259,11 @@ CIFS_ERROR cifsMountFileSystem(char* cifsFileName)
 	}	
 
 	// create an in-memory registry of the volume
+	cifsContext->registry = calloc(CIFS_REGISTRY_SIZE, sizeof(CIFS_REGISTRY_ENTRY_TYPE)); // calloc bcs add index relies on null for no entry 
 
 	// TODO: traverse the file system starting with the root and populate the registry
-	
-	CIFS_REGISTRY;
-	
-		
 
-
-	
+	traverseFolder(cifsContext->superblock->cifsRootNodeIndex, hash("/")); // NOTE: hard coded root. Ew!
 
 	return CIFS_NO_ERROR;
 }
@@ -388,6 +384,9 @@ CIFS_ERROR cifsCreateFile(CIFS_NAME_TYPE filePath, CIFS_CONTENT_TYPE type)
 	for(int i = 0; i < CIFS_INDEX_SIZE; i++) {
 		newInd.content.index[i] = CIFS_INVALID_INDEX;
 	}
+
+	// Add new file/folder to registry TODO: doesn't matter if folder or file bcs folder will be emtpy
+	addToHashTable(&newFD, hash("/")); // TODO: hardcoded root 
 
 	// Write all the changes (write root fd/ind, new fd/ind, SB, BV)
 
@@ -767,17 +766,89 @@ char* cifsGenerateContent(int size)
  * Some extra helper functions
  */
 int doesFileExist(char* filePath) {
-	// TODO: implement
+	// Get list of entries at index of current file in reg
+	CIFS_REGISTRY_ENTRY_TYPE* cur = cifsContext->registry[hash(filePath)];
+
+	// Traverse collision list looking for duplicates 
+	while (cur != NULL) {
+		// TODO: NEED TO COMPARE PARENT FILES
+		// If strings are the same
+		if (strcmp(cur->fileDescriptor.name, filePath) == 0) {
+			return CIFS_DUPLICATE_ERROR;
+		}
+		cur = cur->next;
+	}
+
 	return CIFS_NO_ERROR;
 }
 
-void traverseDisk(CIFS_INDEX_TYPE* index, int size, char* path) {
+/*
+* Traverses Disk and adds all fd to registry (calls function (traverseFolder) to add contents of folder)
+*/
+//void traverseDisk(CIFS_INDEX_TYPE* index, int size, char* path) {
+void addIndex(CIFS_INDEX_TYPE* index, int size, CIFS_FILE_HANDLE_TYPE parentFileHandle) {
 	// TODO: implement
+	// Traverse multiple index blocs (if there are)
+	for (int ind = 0; ind < (size / CIFS_INDEX_SIZE) + 1; ind++) {
+		// Traverse one index block adding its contents to registry 
+		for (int i = 0; (i < CIFS_INDEX_SIZE) && (ind * CIFS_INDEX_SIZE + i < size); i++) {
+			CIFS_BLOCK_TYPE* curBlock = (CIFS_BLOCK_TYPE*) cifsReadBlock(index[i]);
+			
+			// If we are on the last element of an index block (TODO: Which I assume is a reference to the next index block)
+			if (curBlock->type == CIFS_INDEX_CONTENT_TYPE && i + 1 == CIFS_INDEX_SIZE) { 
+				// Change index to next index block
+				index = curBlock->content.index;
+			}
+			// Add block to registry (TODO: are there any other things i shouldnt add to reg?)
+			else if (curBlock->type == CIFS_FILE_CONTENT_TYPE ) {
+				addToHashTable(&(curBlock->content.fileDescriptor), parentFileHandle);
+			}
+			// If folder pass to traverseFolder (adds folder too)
+			else if (curBlock->type == CIFS_FOLDER_CONTENT_TYPE) {
+				// Add contents of folders to registry
+					traverseFolder(curBlock, parentFileHandle);
+			}
+
+			free(curBlock);
+		}
+	}
+		
 }
 
-void addToHashTable(long index, char* filePath, CIFS_FILE_DESCRIPTOR_TYPE* fd)
+
+//void addToHashTable(long index, char* filePath, CIFS_FILE_DESCRIPTOR_TYPE* fd)
+//void addToHashTable(long index, CIFS_FILE_DESCRIPTOR_TYPE* fd)
+void addToHashTable(CIFS_FILE_DESCRIPTOR_TYPE* fd, CIFS_FILE_HANDLE_TYPE parentFileHandle) 
 {
-	// TODO: implement
+	// Get reg index of new node
+	unsigned long regIndex = hash(fd->name);
+
+	// Create new registry node
+	CIFS_REGISTRY_ENTRY_TYPE* node = calloc(1, sizeof(CIFS_REGISTRY_ENTRY_TYPE));
+	node->fileDescriptor = *fd;
+	node->parentFileHandle = parentFileHandle;
+	node->next = cifsContext->registry[regIndex];  // Save linked list of regEntries (in case of collision)
+
+	// Put new node in reg
+	cifsContext->registry[regIndex] = node;
+}
+
+	//TODO: HELPER FUNC CALLS W THIS
+	//CIFS_INDEX_TYPE rootfd = cifsContext->superblock->cifsRootNodeIndex;
+// Meant to be called on folders. Adds folder then passes its index to addIndex (addIndex calls this function on any directories found) 
+void traverseFolder(CIFS_INDEX_TYPE discIndex, CIFS_FILE_HANDLE_TYPE parentFileHandle) {
+	CIFS_BLOCK_TYPE* curFD = (CIFS_BLOCK_TYPE*) cifsReadBlock(discIndex); // TODO: add index (also make sure to free)
+	CIFS_BLOCK_TYPE* curInd = (CIFS_BLOCK_TYPE*) cifsReadBlock(curFD->content.fileDescriptor.block_ref); 
+
+	// Add folder to reg
+	addToHashTable(&(curFD->content.fileDescriptor), parentFileHandle);
+
+	// Add folder index to reg NOTE: add index, we pass curFD.name as parent bcs the stuff in index has curFD.name as parent
+	addIndex(curInd->content.index, curFD->content.fileDescriptor.size, hash(curFD->content.fileDescriptor.name));
+
+	// Free blocks read
+	free(curFD);
+	free(curInd);
 }
 
 void writeBvSb(void) {
