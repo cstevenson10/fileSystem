@@ -386,7 +386,7 @@ CIFS_ERROR cifsCreateFile(CIFS_NAME_TYPE filePath, CIFS_CONTENT_TYPE type)
 	}
 
 	// Add new file/folder to registry TODO: doesn't matter if folder or file bcs folder will be emtpy
-	addToHashTable(&newFD, hash("/")); // TODO: hardcoded root 
+	addToHashTable(&(newFD.content.fileDescriptor), hash("/")); // TODO: hardcoded root 
 
 	// Write all the changes (write root fd/ind, new fd/ind, SB, BV)
 
@@ -784,6 +784,7 @@ int doesFileExist(char* filePath) {
 
 /*
 * Traverses Disk and adds all fd to registry (calls function (traverseFolder) to add contents of folder)
+* Note all items in index block are fd (of folder or file)
 */
 //void traverseDisk(CIFS_INDEX_TYPE* index, int size, char* path) {
 void addIndex(CIFS_INDEX_TYPE* index, int size, CIFS_FILE_HANDLE_TYPE parentFileHandle) {
@@ -792,24 +793,24 @@ void addIndex(CIFS_INDEX_TYPE* index, int size, CIFS_FILE_HANDLE_TYPE parentFile
 	for (int ind = 0; ind < (size / CIFS_INDEX_SIZE) + 1; ind++) {
 		// Traverse one index block adding its contents to registry 
 		for (int i = 0; (i < CIFS_INDEX_SIZE) && (ind * CIFS_INDEX_SIZE + i < size); i++) {
-			CIFS_BLOCK_TYPE* curBlock = (CIFS_BLOCK_TYPE*) cifsReadBlock(index[i]);
+			CIFS_BLOCK_TYPE* curFD = (CIFS_BLOCK_TYPE*) cifsReadBlock(index[i]);
 			
 			// If we are on the last element of an index block (TODO: Which I assume is a reference to the next index block)
-			if (curBlock->type == CIFS_INDEX_CONTENT_TYPE && i + 1 == CIFS_INDEX_SIZE) { 
+			if (curFD->type == CIFS_INDEX_CONTENT_TYPE && i + 1 == CIFS_INDEX_SIZE) { 
 				// Change index to next index block
-				index = curBlock->content.index;
+				index = curFD->content.index;
 			}
-			// Add block to registry (TODO: are there any other things i shouldnt add to reg?)
-			else if (curBlock->type == CIFS_FILE_CONTENT_TYPE ) {
-				addToHashTable(&(curBlock->content.fileDescriptor), parentFileHandle);
+			// If file (add to reg) 
+			else if (curFD->type == CIFS_FILE_CONTENT_TYPE) {
+				addToHashTable(&(curFD->content.fileDescriptor), parentFileHandle);
 			}
-			// If folder pass to traverseFolder (adds folder too)
-			else if (curBlock->type == CIFS_FOLDER_CONTENT_TYPE) {
+			// If folder (traverse folder)
+			else if (curFD->type == CIFS_FOLDER_CONTENT_TYPE) {
 				// Add contents of folders to registry
-					traverseFolder(curBlock, parentFileHandle);
+				traverseFolder(curFD->content.fileDescriptor.file_block_ref, parentFileHandle);
 			}
 
-			free(curBlock);
+			free(curFD);
 		}
 	}
 		
