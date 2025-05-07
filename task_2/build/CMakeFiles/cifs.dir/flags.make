@@ -4,7 +4,7 @@
 # compile C with /usr/bin/cc
 C_DEFINES = 
 
-C_INCLUDES = -I/usr/include/fuse -I/home/connor/comp362/cifs/task_1/inc
+C_INCLUDES = -I/usr/include/fuse -I/home/connor/comp362/fileSystem/task_2/inc
 
 C_FLAGS =  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17
 

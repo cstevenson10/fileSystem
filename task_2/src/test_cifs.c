@@ -186,16 +186,13 @@ void testStep2()
 {
 	printf("\n\nTESTS FOR STEP #2\n=================\n\n");
 	char file1[128] = "file1";
-	cifsCreateFile(file1, CIFS_FOLDER_CONTENT_TYPE);
-
 	char file3[128] = "file3";
-	cifsCreateFile(file3, CIFS_FOLDER_CONTENT_TYPE);
+	char file4[128] = "file4";
 
-	char file2[128] = "file2";
 	printf("\n\nTESTS FOR STEP #2\n=================\n\n");
 	printf("\n\n\nfile 1 exist 2 = %d\n",doesFileExist(file1));
-	printf("file 2 does not exist so 0 = %d\n",doesFileExist(file2));
 	printf("file 3 exist 2 = %d\n\n\n",doesFileExist(file3));
+	printf("file 4 does not exist so 0 = %d\n",doesFileExist(file4));
 	printf("\n\nTESTS FOR STEP #2\n=================\n\n");
 
 	// TODO: implement

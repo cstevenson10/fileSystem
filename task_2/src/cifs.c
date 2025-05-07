@@ -339,6 +339,8 @@ CIFS_ERROR cifsUmountFileSystem(char* cifsFileName)
  */
 CIFS_ERROR cifsCreateFile(CIFS_NAME_TYPE filePath, CIFS_CONTENT_TYPE type)
 {
+	// TODO: chcek for duplicate file
+
     // Find free block for fd and flip the bit in the bitvector (FOR NEW FILE)
 	CIFS_INDEX_TYPE fdIndex = cifsFindFreeBlock(cifsContext->bitvector);
 	cifsFlipBit(cifsContext->bitvector, fdIndex); 
@@ -772,6 +774,9 @@ int doesFileExist(char* filePath) {
 	// Traverse collision list looking for duplicates 
 	while (cur != NULL) {
 		// TODO: NEED TO COMPARE PARENT FILES
+
+		// DEBUG printf("DOES FILE EXIST: %s == %s\n", cur->fileDescriptor.name, filePath);
+
 		// If strings are the same
 		if (strcmp(cur->fileDescriptor.name, filePath) == 0) {
 			return CIFS_DUPLICATE_ERROR;
