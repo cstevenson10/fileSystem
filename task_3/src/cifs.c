@@ -457,6 +457,35 @@ CIFS_ERROR cifsDeleteFile(CIFS_NAME_TYPE filePath)
 
 //////////////////////////////////////////////////////////////////////////
 
+
+// Find or create proc control block
+CIFS_PROCESS_CONTROL_BLOCK_TYPE* getProcBlock(pid_t pid) {
+	CIFS_PROCESS_CONTROL_BLOCK_TYPE* cur = cifsContext->processList;
+
+	// Find proc control block if it exist
+	while (cur != NULL) {
+		if (cur->pid == pid) {
+			return cur;
+		}
+		cur = cur->next;
+	}
+
+	// Create proc block 
+	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = (CIFS_PROCESS_CONTROL_BLOCK_TYPE*) (sizeof(CIFS_PROCESS_CONTROL_BLOCK_TYPE));
+	procBlock->pid = pid;
+
+	return procBlock;
+}
+
+int checkAccess(pid_t owner, pid_t user, mode_t accessRights, mode_t desiredAccess) {
+	// If user
+	
+
+	// If group
+
+	// If global
+}
+
 /***
  *
  * Opens a file for reading or writing.
@@ -482,8 +511,45 @@ CIFS_ERROR cifsDeleteFile(CIFS_NAME_TYPE filePath)
  */
 CIFS_ERROR cifsOpenFile(CIFS_NAME_TYPE filePath, mode_t desiredAccessRights, CIFS_FILE_HANDLE_TYPE *fileHandle)
 {
-	// TODO: implement
+	CIFS_FILE_DESCRIPTOR_TYPE* fd = malloc(sizeof(CIFS_FILE_DESCRIPTOR_TYPE));
+	// Check if while exists
+	if (cifsGetFileInfo(filePath, fd) == CIFS_NOT_FOUND_ERROR) {
+		// File doesn't exist
+		free(fd);
+		return CIFS_NOT_FOUND_ERROR;
+	}
+	// Check if opened by another proc
+	else if (cifsContext->registry[*fileHandle]->referenceCount) {
+		// NOTE: not allowing a file to be open by multiple proc
+		free(fd);
+		return CIFS_OPEN_ERROR;
+	}
+	// Check if access can be granted
+	else if(0){
+		// TODO: how to check accessRights??
+		// USE fopen as guide
+		fd->accessRights;    // rights we need
 
+		free(fd);
+		return CIFS_ACCESS_ERROR;
+	}
+	// Open the shit
+	else {
+		// Get ref to process control block in context->processControl list 
+		OPEN_FILE_TYPE* openFiles = getProcBlock(fuseContext->pid)->openFiles;
+
+		// Add new open file to procBlock
+		OPEN_FILE_TYPE* newFile = (OPEN_FILE_TYPE*) malloc(sizeof(OPEN_FILE_TYPE));
+		newFile->identifier = fd->identifier;
+		newFile->fileHandle = *fileHandle;
+		newFile->processAccessRights = desiredAccessRights;
+		newFile->next = openFiles;		// Prepend new file
+		
+		// Increase access count in registry
+		cifsContext->registry[*fileHandle]++;
+	}
+
+	free(fd);
 	return CIFS_NO_ERROR;
 }
 
@@ -521,6 +587,7 @@ CIFS_ERROR cifsCloseFile(CIFS_FILE_HANDLE_TYPE fileHandle)
 CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* infoBuffer)
 {
 	// TODO: implement
+	// Use registry
 	
 	return CIFS_NO_ERROR;
 }
@@ -839,8 +906,6 @@ void addToHashTable(CIFS_FILE_DESCRIPTOR_TYPE* fd, CIFS_FILE_HANDLE_TYPE parentF
 	cifsContext->registry[regIndex] = node;
 }
 
-	//TODO: HELPER FUNC CALLS W THIS
-	//CIFS_INDEX_TYPE rootfd = cifsContext->superblock->cifsRootNodeIndex;
 // Meant to be called on folders. Adds folder then passes its index to addIndex (addIndex calls this function on any directories found) 
 void traverseFolder(CIFS_INDEX_TYPE discIndex, CIFS_FILE_HANDLE_TYPE parentFileHandle) {
 	CIFS_BLOCK_TYPE* curFD = (CIFS_BLOCK_TYPE*) cifsReadBlock(discIndex); // TODO: add index (also make sure to free)
