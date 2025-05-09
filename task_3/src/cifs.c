@@ -276,6 +276,8 @@ CIFS_ERROR cifsMountFileSystem(char* cifsFileName)
  *
  */
 CIFS_ERROR cifsUmountFileSystem(char* cifsFileName)
+
+// TODO: de-allocate all the stuff in context
 {
 
 #ifdef NO_FUSE_DEBUG
@@ -392,6 +394,7 @@ CIFS_ERROR cifsCreateFile(CIFS_NAME_TYPE filePath, CIFS_CONTENT_TYPE type)
 
 	// Write all the changes (write root fd/ind, new fd/ind, SB, BV)
 
+	// NOTE replace with call to writeSBBV
 	// Write superblock
 	cifsWriteBlock((const unsigned char *) cifsContext->superblock, CIFS_SUPERBLOCK_INDEX);
 
@@ -459,7 +462,8 @@ CIFS_ERROR cifsDeleteFile(CIFS_NAME_TYPE filePath)
 
 
 // Find or create proc control block
-CIFS_PROCESS_CONTROL_BLOCK_TYPE* getProcBlock(pid_t pid) {
+CIFS_PROCESS_CONTROL_BLOCK_TYPE* getProcBlock(void) {
+	pid_t pid = fuseContext->pid;
 	CIFS_PROCESS_CONTROL_BLOCK_TYPE* cur = cifsContext->processList;
 
 	// Find proc control block if it exist
@@ -471,20 +475,50 @@ CIFS_PROCESS_CONTROL_BLOCK_TYPE* getProcBlock(pid_t pid) {
 	}
 
 	// Create proc block 
-	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = (CIFS_PROCESS_CONTROL_BLOCK_TYPE*) (sizeof(CIFS_PROCESS_CONTROL_BLOCK_TYPE));
+	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = (CIFS_PROCESS_CONTROL_BLOCK_TYPE*) malloc(sizeof(CIFS_PROCESS_CONTROL_BLOCK_TYPE));
 	procBlock->pid = pid;
+	// Should I set ROOT as open file procBlock->openFile->(root)
 
 	return procBlock;
 }
 
-int checkAccess(pid_t owner, pid_t user, mode_t accessRights, mode_t desiredAccess) {
+// TODO: Extend to check all access rights
+int checkUserAccess(pid_t owner, mode_t accessRights, mode_t desiredAccess) {
 	// If user
-	
 
-	// If group
 
-	// If global
 }
+
+/*
+ * Compares blockRef between parent of file to be opened and blockref of PID's open files
+*/
+int parentIsOpen(unsigned long long parentIdent, OPEN_FILE_TYPE* head) {
+	// TODO: Check if the parent is open
+	// QUESTION: How does this with root??? Will every proc have root open. Then procs can have same stuff open? No Atomicity? ORR only one write open? (too compilcated)
+	OPEN_FILE_TYPE* openFile = head;
+	while(openFile != NULL) {
+		if (openFile->identifier == parentIdent) {
+			return 1;
+		}
+		openFile = openFile->next;
+	}
+	return 0;
+}
+
+/*
+ * returns reference to registry entry, NULL if not found
+ */
+CIFS_REGISTRY_ENTRY_TYPE* resolveCollision(CIFS_FILE_HANDLE_TYPE fileHandle, CIFS_FILE_HANDLE_TYPE parentFileHandle) {
+	CIFS_REGISTRY_ENTRY_TYPE* cur = cifsContext->registry[fileHandle];
+
+	while (cur != NULL) {
+		if (cur->parentFileHandle == parentFileHandle) {
+			return cur;
+		}
+	}
+	return NULL;
+}
+
 
 /***
  *
@@ -508,47 +542,52 @@ int checkAccess(pid_t owner, pid_t user, mode_t accessRights, mode_t desiredAcce
  * Finally, the function increments the reference count for the file, sets the output parameter to the handle
  * for the file and returns CIFS_NO_ERROR.
  *
+ *  NOTE: this function and functions called by this function rely on the cwd being the top of openFile in a PCB
  */
 CIFS_ERROR cifsOpenFile(CIFS_NAME_TYPE filePath, mode_t desiredAccessRights, CIFS_FILE_HANDLE_TYPE *fileHandle)
 {
 	CIFS_FILE_DESCRIPTOR_TYPE* fd = malloc(sizeof(CIFS_FILE_DESCRIPTOR_TYPE));
-	// Check if while exists
+
+	// Check if File exists
 	if (cifsGetFileInfo(filePath, fd) == CIFS_NOT_FOUND_ERROR) {
-		// File doesn't exist
 		free(fd);
 		return CIFS_NOT_FOUND_ERROR;
 	}
 	// Check if opened by another proc
-	else if (cifsContext->registry[*fileHandle]->referenceCount) {
-		// NOTE: not allowing a file to be open by multiple proc
+	else if (cifsContext->registry[*fileHandle]->referenceCount) {			// NOTE: not allowing a file to be open by multiple proc
 		free(fd);
 		return CIFS_OPEN_ERROR;
 	}
-	// Check if access can be granted
-	else if(0){
-		// TODO: how to check accessRights??
-		// USE fopen as guide
-		fd->accessRights;    // rights we need
-
+	// Check if proc has parent folder open TODO: handle opening root?
+	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock(); 
+	if(cifsContext->registry[*fileHandle]->parentFileHandle == procBlock->openFiles->fileHandle) {
+		return CIFS_OPEN_ERROR;
+	}
+	// Check if desired access is allowed 
+	else if((desiredAccessRights & fd->accessRights) != desiredAccessRights) {
 		free(fd);
 		return CIFS_ACCESS_ERROR;
 	}
-	// Open the shit
-	else {
-		// Get ref to process control block in context->processControl list 
-		OPEN_FILE_TYPE* openFiles = getProcBlock(fuseContext->pid)->openFiles;
-
-		// Add new open file to procBlock
-		OPEN_FILE_TYPE* newFile = (OPEN_FILE_TYPE*) malloc(sizeof(OPEN_FILE_TYPE));
-		newFile->identifier = fd->identifier;
-		newFile->fileHandle = *fileHandle;
-		newFile->processAccessRights = desiredAccessRights;
-		newFile->next = openFiles;		// Prepend new file
 		
-		// Increase access count in registry
-		cifsContext->registry[*fileHandle]++;
-	}
+	// Do the thing (open the file)! Add new open file to procBlock and stuff
+	resolveCollision(*fileHandle, procBlock->openFiles->fileHandle)->referenceCount++;   // Increase access count in registry (relies on cwd top of openFile)
 
+	OPEN_FILE_TYPE* newFile = (OPEN_FILE_TYPE*) malloc(sizeof(OPEN_FILE_TYPE));			// Create open file node
+	newFile->identifier = fd->identifier;
+	newFile->fileHandle = *fileHandle;
+	newFile->processAccessRights = desiredAccessRights;
+	// If we should change the current working dir (set new open file as head of open file list)
+	if (fd->type == CIFS_FOLDER_CONTENT_TYPE) {
+		newFile->next = procBlock->openFiles;		// Prepend new file
+		procBlock->openFiles = newFile;
+	}
+	// Current working dir is NOT changing (put as second entry)
+	else {
+		OPEN_FILE_TYPE* temp = procBlock->openFiles->next;
+		procBlock->openFiles->next = newFile;
+		newFile->next = temp;
+	}
+	
 	free(fd);
 	return CIFS_NO_ERROR;
 }
@@ -582,14 +621,26 @@ CIFS_ERROR cifsCloseFile(CIFS_FILE_HANDLE_TYPE fileHandle)
  * block referenced from the registry.
  *
  * If the file is not found, then it returns CIFS_NOT_FOUND_ERROR
- *
+ * NOTE: relies on fact that cwd is top of openFile in PCB
  */
 CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* infoBuffer)
 {
-	// TODO: implement
-	// Use registry
-	
-	return CIFS_NO_ERROR;
+	// NOTE: Assuming first directy fond in open file list is our current directory
+	//    WHY: because I don't see how else we can know our parent file handle. 
+	//    Parent file handle is not stored in any think we have access too using just our cur filepath. AAAAAAAAAAAAAAAAAA
+	// I JUST SAW THAT WE ALREAADY R SUPPOSED TO MAKE THIS ASSUMTION ALIJFLKJFDSLFJSDLFKJSDFL:SDJFLSDFJ:LFSDL:
+
+	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock();
+
+
+	CIFS_REGISTRY_ENTRY_TYPE* regEntry = resolveCollision(hash(filePath), procBlock->openFiles->fileHandle);
+	if (!regEntry) {
+		return CIFS_NOT_FOUND_ERROR;
+	}
+	else {
+		infoBuffer = &(regEntry->fileDescriptor);
+		return CIFS_NO_ERROR;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -620,7 +671,7 @@ CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* i
  * times of last modification and access.
  *
  * This order of actions prevents file corruption, since in case of any error with writing new content, the file's
- * old version is intact. This technique is called copy-on-write and is an alternative to journalling.
+ * old version is intact. This technique is called copy-on-write and is an alternative to journaling.
  *
  * The content of the in-memory file descriptor must be replaced by the new data.
  *
@@ -629,7 +680,22 @@ CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* i
  */
 CIFS_ERROR cifsWriteFile(CIFS_FILE_HANDLE_TYPE fileHandle, char* writeBuffer)
 {
-	// TODO: implement
+	// Check if file is open
+
+	// Check for access rights to write (S_IWUSR)
+	
+	// Calculate space needed
+
+	// Check if there is enough space
+	
+	// Do the thing i.e.
+	//	- Acquire as many new blocks needed (update BV)
+	//	- copy writeBuffer into its spots (write the actual data)
+	//	- write BV
+	//	- write new fd
+	
+
+
 
 	return CIFS_NO_ERROR;
 }
@@ -923,10 +989,15 @@ void traverseFolder(CIFS_INDEX_TYPE discIndex, CIFS_FILE_HANDLE_TYPE parentFileH
 }
 
 void writeBvSb(void) {
-	// TODO: implement
-
 	// write bitvector (Bv)
-	
+	unsigned char block[CIFS_BLOCK_SIZE];
+	for (int i = 0; i < CIFS_SUPERBLOCK_INDEX; i++) {
+		for (int j = 0; j < CIFS_BLOCK_SIZE; j++) {
+			block[j] = cifsContext->bitvector[i * CIFS_BLOCK_SIZE + j];
+		}
+		cifsWriteBlock((const unsigned char *) block, i);
+	}
+
 	// write superblock (Sb)
-	
+	cifsWriteBlock((const unsigned char *) cifsContext->superblock, CIFS_SUPERBLOCK_INDEX);
 }
