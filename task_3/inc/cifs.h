@@ -163,7 +163,7 @@ typedef char CIFS_DATA_TYPE[CIFS_DATA_SIZE];
 */
 typedef struct cifs_block_type
 {
-	CIFS_CONTENT_TYPE type; // TODO: Whats the difference between this and fd type
+	CIFS_CONTENT_TYPE type;
 	union
 	{ // content depends on the type
 		CIFS_FILE_DESCRIPTOR_TYPE fileDescriptor __attribute__((packed)); // for directories and files

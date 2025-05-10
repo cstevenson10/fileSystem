@@ -482,13 +482,6 @@ CIFS_PROCESS_CONTROL_BLOCK_TYPE* getProcBlock(void) {
 	return procBlock;
 }
 
-// TODO: Extend to check all access rights
-int checkUserAccess(pid_t owner, mode_t accessRights, mode_t desiredAccess) {
-	// If user
-
-
-}
-
 /*
  * Compares blockRef between parent of file to be opened and blockref of PID's open files
 */
@@ -546,7 +539,7 @@ CIFS_REGISTRY_ENTRY_TYPE* resolveCollision(CIFS_FILE_HANDLE_TYPE fileHandle, CIF
  */
 CIFS_ERROR cifsOpenFile(CIFS_NAME_TYPE filePath, mode_t desiredAccessRights, CIFS_FILE_HANDLE_TYPE *fileHandle)
 {
-	CIFS_FILE_DESCRIPTOR_TYPE* fd = malloc(sizeof(CIFS_FILE_DESCRIPTOR_TYPE));
+	CIFS_FILE_DESCRIPTOR_TYPE* fd = (CIFS_FILE_DESCRIPTOR_TYPE*) malloc(sizeof(CIFS_FILE_DESCRIPTOR_TYPE));
 
 	// Check if File exists
 	if (cifsGetFileInfo(filePath, fd) == CIFS_NOT_FOUND_ERROR) {
@@ -558,9 +551,10 @@ CIFS_ERROR cifsOpenFile(CIFS_NAME_TYPE filePath, mode_t desiredAccessRights, CIF
 		free(fd);
 		return CIFS_OPEN_ERROR;
 	}
-	// Check if proc has parent folder open TODO: handle opening root?
+	// Check if proc has parent folder open (NOTE: handle's root)
 	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock(); 
-	if(cifsContext->registry[*fileHandle]->parentFileHandle == procBlock->openFiles->fileHandle) {
+	// If not opening root or parent is not open
+	if (strcmp(filePath, "/") != 0 || cifsContext->registry[*fileHandle]->parentFileHandle != procBlock->openFiles->fileHandle) { // NOTE: seg fault if try open something before opening root
 		return CIFS_OPEN_ERROR;
 	}
 	// Check if desired access is allowed 
@@ -632,7 +626,6 @@ CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* i
 
 	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock();
 
-
 	CIFS_REGISTRY_ENTRY_TYPE* regEntry = resolveCollision(hash(filePath), procBlock->openFiles->fileHandle);
 	if (!regEntry) {
 		return CIFS_NOT_FOUND_ERROR;
@@ -676,15 +669,60 @@ CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* i
  * The content of the in-memory file descriptor must be replaced by the new data.
  *
  * The function returns CIFS_WRITE_ERROR in response to exception not specified earlier.
- *
+ * NOTE: Implemented as APPEND (as opposed to overwrite)
  */
 CIFS_ERROR cifsWriteFile(CIFS_FILE_HANDLE_TYPE fileHandle, char* writeBuffer)
 {
-	// Check if file is open
+	CIFS_REGISTRY_ENTRY_TYPE* regEntry = resolveCollision(fileHandle, getProcBlock()->openFiles->fileHandle);
 
+	// TODO: check its a file?
+
+	// Check if file is open
+	if (!cifsIsOpen(fileHandle)) {
+		return CIFS_OPEN_ERROR;
+	}
 	// Check for access rights to write (S_IWUSR)
+	else if ((regEntry->fileDescriptor.accessRights & S_IWUSR) != S_IWUSR) {
+		return CIFS_ACCESS_ERROR;
+	}
+
+	// TODO: Better approach?: get all blocks needed from BV and put their ref in index
+	//  THEN: go through and add the data. Easier to check error of getting enough space (just dont write anything if error)
+
+	// REMEMBER TO WRITE CHANGES (reg changes -> disc changes) esp fd
+
+	// write (append) new data TODO: allow for writing multiple index pages
+	int newDataSize = strlen(writeBuffer);
+	int newDataBlockCount = (newDataSize + CIFS_DATA_SIZE - 1) / CIFS_DATA_SIZE;  				// Round up division
+	int existingDataBlockCount = (regEntry->fileDescriptor.size + CIFS_DATA_SIZE - 1) / CIFS_DATA_SIZE;	// Round up division
+
+	// Get index block
+	CIFS_BLOCK_TYPE* indBlock = cifsReadBlock(regEntry->fileDescriptor.block_ref);
+
+	// Fills data blocks with data from writeBuffer char by char then appends the new data block to the file's index block
+	int i = 0;		// Used to index through writeBuffer
+	int indPosition = existingDataBlockCount; // index of index block (appending)
+	for (int dataBlock = 0; dataBlock < newDataBlockCount; dataBlock++, indPosition++) {
+		// Create new data block
+		int j;
+		CIFS_BLOCK_TYPE dataBlock;
+		dataBlock.type = CIFS_DATA_CONTENT_TYPE;
+		for (j = 0; j < (newDataSize - (i * CIFS_DATA_SIZE)) && j < CIFS_DATA_SIZE; j++, i++) {
+			// Add byte by byte new data
+			dataBlock.content.data[j] = writeBuffer[i];
+		}
+		// TODO: error check (i.e. no free block, write fail etc)
+		CIFS_INDEX_TYPE dataBlockInd = cifsFindFreeBlock(cifsContext->bitvector);
+   		cifsWriteBlock((const unsigned char *) &dataBlock, dataBlockInd);
+		cifsFlipBit(cifsContext->bitvector, dataBlockInd);
+		indBlock->content.index[indPosition] = dataBlockInd;
+	}
+
+	// TODO: WRITE INDEX BLOCK!!!!!!! & BV
+	free(indBlock);
+	// USE findfreeBlock()
 	
-	// Calculate space needed
+	// use   cifsContext->superblock->cifsDataBlockSize
 
 	// Check if there is enough space
 	
@@ -762,7 +800,7 @@ size_t cifsWriteBlock(const unsigned char* content, CIFS_INDEX_TYPE blockNumber)
     cifsCheckIOError("WRITE", "ftell");
 	size_t len = fwrite((const void *)content, sizeof(unsigned char), CIFS_BLOCK_SIZE, cifsVolume);
     cifsCheckIOError("WRITE", "fwrite");
-	printf("LENGTH=%4ld, CONTENT=", len); // %s will ussually not work
+	printf("LENGTH=%4ld, CONTENT=", len); // %s will usually not work
 	cifsPrintBlockContent(content);
 	printf("\n");
 
