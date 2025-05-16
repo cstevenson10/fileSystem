@@ -649,6 +649,19 @@ CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* i
 
 //////////////////////////////////////////////////////////////////////////
 
+int cifsIsOpen(CIFS_FILE_HANDLE_TYPE handle) {
+	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock();
+	OPEN_FILE_TYPE* openFile = procBlock->openFiles;
+
+	while (openFile != NULL) {
+		if (openFile->fileHandle == handle) {
+			return 1;
+		}
+		openFile = openFile->next;
+	}
+	return 0;
+}
+
 /***
  *
  * The function replaces content of a file with new one pointed to by the parameter writeBuffer.
