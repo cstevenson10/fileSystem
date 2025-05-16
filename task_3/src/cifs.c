@@ -501,7 +501,15 @@ CIFS_PROCESS_CONTROL_BLOCK_TYPE* getProcBlock(void) {
 	// Create proc block 
 	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = (CIFS_PROCESS_CONTROL_BLOCK_TYPE*) malloc(sizeof(CIFS_PROCESS_CONTROL_BLOCK_TYPE));
 	procBlock->pid = pid;
-	// Should I set ROOT as open file procBlock->openFile->(root)
+
+	// Add to process list in cifsContext
+	if (cifsContext->processList == NULL) {
+		cifsContext->processList = procBlock;
+		procBlock->next = NULL;
+	} else {
+		procBlock->next = cifsContext->processList;
+		cifsContext->processList = procBlock;
+	}
 
 	return procBlock;
 }
