@@ -205,7 +205,15 @@ void testStep2()
  */
 void testStep3()
 {
+	CIFS_FILE_HANDLE_TYPE file1Handle = hash("file1");
 	printf("\n\nTESTS FOR STEP #3\n=================\n\n");
+	cifsOpenFile("file1", S_IRUSR | S_IWUSR, file1Handle);
+	char *in = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada. Proin sit amet tristique risus. Integer ac sapien ac libero pulvinar vulputate. Suspendisse potenti. Morbi nec efficitur felis. Duis ut mauris vel purus malesuada volutpat. Nunc eget leo non nisi congue ullamcorper nec nec lorem. Sed porta velit id justo varius, in congue felis dignissim. Curabitur ut magna et nulla fermentum.";
+	char out[510];
+	cifsWriteFile(file1Handle, in);
+	cifsReadFile(file1Handle, &out);
+	printf("\n\n@@@@@@@@@@ PLEASE BE 0: %d @@@@@@@@@@@@\n\n",strcmp(in, out));
+
 
 	// TODO: implement
 }

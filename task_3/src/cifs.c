@@ -343,6 +343,17 @@ CIFS_ERROR cifsCreateFile(CIFS_NAME_TYPE filePath, CIFS_CONTENT_TYPE type)
 {
 	// TODO: chcek for duplicate file
 
+	// Check the proc has an open folder
+	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock();
+	if (procBlock->openFiles == NULL) {	// NOTE: doesn't really check if the first thing is a folder
+		return CIFS_WRITE_ERROR;
+	} 
+
+	// Get info and check privileges of current working dir
+	// TODO:
+
+
+
     // Find free block for fd and flip the bit in the bitvector (FOR NEW FILE)
 	CIFS_INDEX_TYPE fdIndex = cifsFindFreeBlock(cifsContext->bitvector);
 	cifsFlipBit(cifsContext->bitvector, fdIndex); 
