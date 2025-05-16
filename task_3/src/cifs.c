@@ -645,8 +645,10 @@ CIFS_ERROR cifsCloseFile(CIFS_FILE_HANDLE_TYPE fileHandle)
 CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* infoBuffer)
 {
 	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock();
+	
+	unsigned long fileHandle = hash(filePath);
 
-	CIFS_REGISTRY_ENTRY_TYPE* regEntry = resolveCollision(hash(filePath), procBlock->openFiles->fileHandle);
+	CIFS_REGISTRY_ENTRY_TYPE* regEntry = resolveCollision(fileHandle, procBlock->openFiles->fileHandle);
 	if (!regEntry) {
 		return CIFS_NOT_FOUND_ERROR;
 	}
