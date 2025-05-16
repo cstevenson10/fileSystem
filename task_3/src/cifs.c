@@ -699,7 +699,7 @@ CIFS_ERROR cifsWriteFile(CIFS_FILE_HANDLE_TYPE fileHandle, char* writeBuffer)
 	regEntry->fileDescriptor.size += newDataSize;
 
 	// Get index block
-	CIFS_BLOCK_TYPE* indBlock = cifsReadBlock(regEntry->fileDescriptor.block_ref);
+	CIFS_BLOCK_TYPE* indBlock = (CIFS_BLOCK_TYPE*) cifsReadBlock(regEntry->fileDescriptor.block_ref);
 
 	// Fills data blocks with data from writeBuffer char by char then appends the new data block to the file's index block
 	int i = 0;		// Used to index through writeBuffer
@@ -723,7 +723,7 @@ CIFS_ERROR cifsWriteFile(CIFS_FILE_HANDLE_TYPE fileHandle, char* writeBuffer)
 
 	// Write all changes
 	writeBvSb();
-	cifsWriteBlock(indBlock, regEntry->fileDescriptor.block_ref);
+	cifsWriteBlock((const unsigned char *) indBlock, regEntry->fileDescriptor.block_ref);
 	CIFS_BLOCK_TYPE fd; 			// Create new block bcs we only have copy of fd in reg and need to write cifs_block_type for fd
 	fd.type = CIFS_FILE_CONTENT_TYPE;
 	fd.content.fileDescriptor = regEntry->fileDescriptor;
@@ -780,7 +780,7 @@ CIFS_ERROR cifsReadFile(CIFS_FILE_HANDLE_TYPE fileHandle, char** readBuffer)
 	int i = 0;				// Used to index through read
 	for (int block = 0; block < dataBlockCount; block++) {
 		// Get the data block 
-		CIFS_BLOCK_TYPE* dataBlock = cifsReadBlock(indBlock->content.index[indPosition++]);
+		CIFS_BLOCK_TYPE* dataBlock = (CIFS_BLOCK_TYPE*) cifsReadBlock(indBlock->content.index[indPosition++]);
 		for (int j = 0; i < regEntry->fileDescriptor.size && j < CIFS_DATA_SIZE; j++, i++) {
 			// Read byte by byte
 			read[i] = dataBlock->content.data[j];
