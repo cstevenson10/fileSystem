@@ -1,20 +1,20 @@
 [
 {
-  "directory": "/home/connor/comp362/fileSystem/task_2/build",
-  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/fileSystem/task_2/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/cifs.dir/src/test_cifs.c.o -c /home/connor/comp362/fileSystem/task_2/src/test_cifs.c",
-  "file": "/home/connor/comp362/fileSystem/task_2/src/test_cifs.c",
+  "directory": "/home/connor/comp362/fileSystem/task_3/build",
+  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/fileSystem/task_3/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/cifs.dir/src/test_cifs.c.o -c /home/connor/comp362/fileSystem/task_3/src/test_cifs.c",
+  "file": "/home/connor/comp362/fileSystem/task_3/src/test_cifs.c",
   "output": "CMakeFiles/cifs.dir/src/test_cifs.c.o"
 },
 {
-  "directory": "/home/connor/comp362/fileSystem/task_2/build",
-  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/fileSystem/task_2/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/cifs.dir/src/cifs.c.o -c /home/connor/comp362/fileSystem/task_2/src/cifs.c",
-  "file": "/home/connor/comp362/fileSystem/task_2/src/cifs.c",
+  "directory": "/home/connor/comp362/fileSystem/task_3/build",
+  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/fileSystem/task_3/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/cifs.dir/src/cifs.c.o -c /home/connor/comp362/fileSystem/task_3/src/cifs.c",
+  "file": "/home/connor/comp362/fileSystem/task_3/src/cifs.c",
   "output": "CMakeFiles/cifs.dir/src/cifs.c.o"
 },
 {
-  "directory": "/home/connor/comp362/fileSystem/task_2/build",
-  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/fileSystem/task_2/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/blockVolume.dir/src/blockVolume.c.o -c /home/connor/comp362/fileSystem/task_2/src/blockVolume.c",
-  "file": "/home/connor/comp362/fileSystem/task_2/src/blockVolume.c",
+  "directory": "/home/connor/comp362/fileSystem/task_3/build",
+  "command": "/usr/bin/cc  -I/usr/include/fuse -I/home/connor/comp362/fileSystem/task_3/inc  -D_FILE_OFFSET_BITS=64 -g -Wall --pedantic -g -O0 -D_DEBUG -DNO_FUSE_DEBUG -std=gnu17 -o CMakeFiles/blockVolume.dir/src/blockVolume.c.o -c /home/connor/comp362/fileSystem/task_3/src/blockVolume.c",
+  "file": "/home/connor/comp362/fileSystem/task_3/src/blockVolume.c",
   "output": "CMakeFiles/blockVolume.dir/src/blockVolume.c.o"
 }
 ]

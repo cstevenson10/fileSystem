@@ -630,11 +630,6 @@ CIFS_ERROR cifsCloseFile(CIFS_FILE_HANDLE_TYPE fileHandle)
  */
 CIFS_ERROR cifsGetFileInfo(CIFS_NAME_TYPE filePath, CIFS_FILE_DESCRIPTOR_TYPE* infoBuffer)
 {
-	// NOTE: Assuming first directy fond in open file list is our current directory
-	//    WHY: because I don't see how else we can know our parent file handle. 
-	//    Parent file handle is not stored in any think we have access too using just our cur filepath. AAAAAAAAAAAAAAAAAA
-	// I JUST SAW THAT WE ALREAADY R SUPPOSED TO MAKE THIS ASSUMTION ALIJFLKJFDSLFJSDLFKJSDFL:SDJFLSDFJ:LFSDL:
-
 	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock();
 
 	CIFS_REGISTRY_ENTRY_TYPE* regEntry = resolveCollision(hash(filePath), procBlock->openFiles->fileHandle);
