@@ -205,6 +205,7 @@ void testStep2()
  */
 void testStep3()
 {
+	openRoot();
 	CIFS_FILE_HANDLE_TYPE file1Handle = hash("file1");
 	printf("\n\nTESTS FOR STEP #3\n=================\n\n");
 	cifsOpenFile("file1", S_IRUSR | S_IWUSR, file1Handle);
