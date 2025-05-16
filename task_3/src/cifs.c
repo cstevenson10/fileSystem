@@ -553,7 +553,7 @@ CIFS_ERROR cifsOpenFile(CIFS_NAME_TYPE filePath, mode_t desiredAccessRights, CIF
 	CIFS_FILE_DESCRIPTOR_TYPE* fd = (CIFS_FILE_DESCRIPTOR_TYPE*) malloc(sizeof(CIFS_FILE_DESCRIPTOR_TYPE));
 
 	// Check if File exists
-	if (cifsGetFileInfo(filePath, fd) == CIFS_NOT_FOUND_ERROR) {
+	if (cifsGetFileInfo(filePath, fd) != CIFS_NO_ERROR) {
 		free(fd);
 		return CIFS_NOT_FOUND_ERROR;
 	}

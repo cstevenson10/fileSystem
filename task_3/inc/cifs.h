@@ -357,6 +357,8 @@ int doesFileExist(char* filePath);
 void writeBvSb(void);
 void addIndex(CIFS_INDEX_TYPE* index, int size, CIFS_FILE_HANDLE_TYPE parentFileHandle);
 CIFS_PROCESS_CONTROL_BLOCK_TYPE* getProcBlock(void);
+int parentIsOpen(unsigned long long parentIdent, OPEN_FILE_TYPE* head);
+CIFS_REGISTRY_ENTRY_TYPE *resolveCollision(CIFS_FILE_HANDLE_TYPE fileHandle, CIFS_FILE_HANDLE_TYPE parentFileHandle);
 /***
  * The following functions can be used to simulate FUSE context's user and process identifiers for testing.
  *
