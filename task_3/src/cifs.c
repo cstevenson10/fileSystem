@@ -317,6 +317,7 @@ CIFS_ERROR openRoot(void) {
 	openfile->processAccessRights = S_IWUSR | S_IRUSR; 
 	CIFS_BLOCK_TYPE* rootFD = (CIFS_BLOCK_TYPE*) cifsReadBlock(cifsContext->superblock->cifsRootNodeIndex);
 	openfile->identifier = rootFD->content.fileDescriptor.identifier;
+	procBlock->openFiles = openfile; 
 	free(rootFD);
 
 	return CIFS_NO_ERROR;
