@@ -356,7 +356,7 @@ void addToHashTable(CIFS_FILE_DESCRIPTOR_TYPE* fd, CIFS_FILE_HANDLE_TYPE parentF
 int doesFileExist(char* filePath);
 void writeBvSb(void);
 void addIndex(CIFS_INDEX_TYPE* index, int size, CIFS_FILE_HANDLE_TYPE parentFileHandle);
-
+CIFS_PROCESS_CONTROL_BLOCK_TYPE* getProcBlock(void);
 /***
  * The following functions can be used to simulate FUSE context's user and process identifiers for testing.
  *
