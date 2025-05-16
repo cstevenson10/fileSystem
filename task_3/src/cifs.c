@@ -688,52 +688,48 @@ CIFS_ERROR cifsWriteFile(CIFS_FILE_HANDLE_TYPE fileHandle, char* writeBuffer)
 
 	// TODO: Better approach?: get all blocks needed from BV and put their ref in index
 	//  THEN: go through and add the data. Easier to check error of getting enough space (just dont write anything if error)
+	// TODO: allow for writing multiple index pages
 
-	// REMEMBER TO WRITE CHANGES (reg changes -> disc changes) esp fd
-
-	// write (append) new data TODO: allow for writing multiple index pages
+	// write (append) new data
 	int newDataSize = strlen(writeBuffer);
-	int newDataBlockCount = (newDataSize + CIFS_DATA_SIZE - 1) / CIFS_DATA_SIZE;  				// Round up division
+	int newDataBlockCount = (newDataSize + CIFS_DATA_SIZE - 1) / CIFS_DATA_SIZE;  						// Round up division
 	int existingDataBlockCount = (regEntry->fileDescriptor.size + CIFS_DATA_SIZE - 1) / CIFS_DATA_SIZE;	// Round up division
+
+	// Update fd size
+	regEntry->fileDescriptor.size += newDataSize;
 
 	// Get index block
 	CIFS_BLOCK_TYPE* indBlock = cifsReadBlock(regEntry->fileDescriptor.block_ref);
 
 	// Fills data blocks with data from writeBuffer char by char then appends the new data block to the file's index block
 	int i = 0;		// Used to index through writeBuffer
-	int indPosition = existingDataBlockCount; // index of index block (appending)
-	for (int dataBlock = 0; dataBlock < newDataBlockCount; dataBlock++, indPosition++) {
+	int indPosition = existingDataBlockCount; // index of file index block (appending)
+	for (int block = 0; block < newDataBlockCount; block++) {
 		// Create new data block
 		int j;
 		CIFS_BLOCK_TYPE dataBlock;
 		dataBlock.type = CIFS_DATA_CONTENT_TYPE;
-		for (j = 0; j < (newDataSize - (i * CIFS_DATA_SIZE)) && j < CIFS_DATA_SIZE; j++, i++) {
+		for (j = 0; j < (newDataSize - (block * CIFS_DATA_SIZE)) - 1 && j < CIFS_DATA_SIZE; j++, i++) {		// minus one to exclude \0 on last data block
 			// Add byte by byte new data
 			dataBlock.content.data[j] = writeBuffer[i];
 		}
 		// TODO: error check (i.e. no free block, write fail etc)
+		// Write block to mem 
 		CIFS_INDEX_TYPE dataBlockInd = cifsFindFreeBlock(cifsContext->bitvector);
    		cifsWriteBlock((const unsigned char *) &dataBlock, dataBlockInd);
 		cifsFlipBit(cifsContext->bitvector, dataBlockInd);
-		indBlock->content.index[indPosition] = dataBlockInd;
+		indBlock->content.index[indPosition++] = dataBlockInd;
 	}
 
-	// TODO: WRITE INDEX BLOCK!!!!!!! & BV
+	// Write all changes
+	writeBvSb();
+	cifsWriteBlock(indBlock, regEntry->fileDescriptor.block_ref);
+	CIFS_BLOCK_TYPE fd; 			// Create new block bcs we only have copy of fd in reg and need to write cifs_block_type for fd
+	fd.type = CIFS_FILE_CONTENT_TYPE;
+	fd.content.fileDescriptor = regEntry->fileDescriptor;
+	cifsWriteBlock((const unsigned char *) &fd, regEntry->fileDescriptor.file_block_ref);
+
 	free(indBlock);
-	// USE findfreeBlock()
-	
-	// use   cifsContext->superblock->cifsDataBlockSize
-
-	// Check if there is enough space
-	
-	// Do the thing i.e.
-	//	- Acquire as many new blocks needed (update BV)
-	//	- copy writeBuffer into its spots (write the actual data)
-	//	- write BV
-	//	- write new fd
-	
-
-
 
 	return CIFS_NO_ERROR;
 }
@@ -761,7 +757,41 @@ CIFS_ERROR cifsWriteFile(CIFS_FILE_HANDLE_TYPE fileHandle, char* writeBuffer)
  */
 CIFS_ERROR cifsReadFile(CIFS_FILE_HANDLE_TYPE fileHandle, char** readBuffer)
 {
-	// TODO: implement
+	CIFS_REGISTRY_ENTRY_TYPE* regEntry = resolveCollision(fileHandle, getProcBlock()->openFiles->fileHandle);
+	char* read = malloc((regEntry->fileDescriptor.size + 1) * sizeof(char));
+
+	// Check if file is open
+	if (!cifsIsOpen(fileHandle)) {
+		return CIFS_OPEN_ERROR;
+	}
+	// Check for access rights for user to read (S_IRUSR)
+	else if ((regEntry->fileDescriptor.accessRights & S_IRUSR) != S_IRUSR) {
+		return CIFS_ACCESS_ERROR;
+	}
+
+	// TODO: Extend to read multiple index pages
+
+	int dataBlockCount = (regEntry->fileDescriptor.size + CIFS_DATA_SIZE - 1) / CIFS_DATA_SIZE;	// Round up division
+
+	// Get index block
+	CIFS_BLOCK_TYPE* indBlock = (CIFS_BLOCK_TYPE*) cifsReadBlock(regEntry->fileDescriptor.block_ref);
+
+	int indPosition = 0;	// index of file index block (appending)
+	int i = 0;				// Used to index through read
+	for (int block = 0; block < dataBlockCount; block++) {
+		// Get the data block 
+		CIFS_BLOCK_TYPE* dataBlock = cifsReadBlock(indBlock->content.index[indPosition++]);
+		for (int j = 0; i < regEntry->fileDescriptor.size && j < CIFS_DATA_SIZE; j++, i++) {
+			// Read byte by byte
+			read[i] = dataBlock->content.data[j];
+		}
+		free(dataBlock);
+	}
+	// Append null
+	read[i] = '\0';
+
+	// Assign to readBuffer
+	*readBuffer = read;
 
 	return CIFS_NO_ERROR;
 }
