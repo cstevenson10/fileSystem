@@ -310,6 +310,18 @@ CIFS_ERROR cifsUmountFileSystem(char* cifsFileName)
 
 //////////////////////////////////////////////////////////////////////////
 
+CIFS_ERROR openRoot(void) {
+	CIFS_PROCESS_CONTROL_BLOCK_TYPE* procBlock = getProcBlock();
+	OPEN_FILE_TYPE* openfile = (OPEN_FILE_TYPE*) malloc(sizeof(OPEN_FILE_TYPE));
+	openfile->fileHandle = cifsContext->superblock->cifsRootNodeIndex;
+	openfile->processAccessRights = S_IWUSR | S_IRUSR; 
+	CIFS_BLOCK_TYPE* rootFD = (CIFS_BLOCK_TYPE*) cifsReadBlock(cifsContext->superblock->cifsRootNodeIndex);
+	openfile->identifier = rootFD->content.fileDescriptor.identifier;
+	free(rootFD);
+
+	return CIFS_NO_ERROR;
+}
+
 /***
  *
  * Depending on the type parameter the function creates a file or a folder in the current directory
@@ -519,6 +531,7 @@ CIFS_REGISTRY_ENTRY_TYPE* resolveCollision(CIFS_FILE_HANDLE_TYPE fileHandle, CIF
 		if (cur->parentFileHandle == parentFileHandle) {
 			return cur;
 		}
+		cur = cur->next;
 	}
 	return NULL;
 }
